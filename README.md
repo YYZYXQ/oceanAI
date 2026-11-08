@@ -68,6 +68,17 @@ fresh `npm start` dataset (server on `:3000`). To reset the dataset, delete
 Demo IDs (fixed by the idempotent seeder, see `GET /api/schema` and
 `GET /api/certs`):
 
+> **Windows/PowerShell note:** the `curl -d '{"courseId":1}'` style below is
+> bash syntax. On Windows, `curl` is an alias for PowerShell's
+> `Invoke-WebRequest`, and single-quoted JSON with `curl.exe` can lose its
+> quotes (server then returns 400 for malformed JSON). Use instead:
+>
+> ```
+> $h = @{ 'X-User' = 'alice@east.test'; 'Idempotency-Key' = 'a2-key' }
+> $b = '{"courseId":1}'
+> Invoke-RestMethod -Method Post -Uri http://localhost:3000/api/certs/bulk -Headers $h -ContentType 'application/json' -Body $b
+> ```
+
 - courses: `1` East "Safety 101", `2` East "First Aid Refresher", `3` West "Safety 101"
 - certificates: `1` `EAST-2026-000001`, `2` `WEST-2026-000001`
 

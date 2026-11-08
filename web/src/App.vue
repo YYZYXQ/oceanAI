@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { api, setActor } from './api';
 import CertificateList from './views/CertificateList.vue';
 import CertificateDetail from './views/CertificateDetail.vue';
@@ -21,17 +21,20 @@ onMounted(async () => {
     schema.value = s;
     if (s.admins.length) {
       actorEmail.value = s.admins[0].email;
-      setActor(actorEmail.value);
     }
   } catch (e) {
     console.error('schema load failed', e);
   }
 });
 
-function switchActor() {
-  setActor(actorEmail.value);
+// Any actor change re-binds the header and forces a fresh list fetch via the
+// `<main :key="actorEmail">` remount below. Driven by the reactive value, so it
+// does not depend on the select's `change` event ordering.
+watch(actorEmail, (email) => {
+  if (!email) return;
+  setActor(email);
   view.value = { name: 'list' };
-}
+});
 
 function openDetail(id) {
   view.value = { name: 'detail', id };
@@ -44,7 +47,7 @@ function openDetail(id) {
       <h1>Certificate Admin Console</h1>
       <div class="actor-box">
         <label for="actor">Acting as</label>
-        <select id="actor" v-model="actorEmail" @change="switchActor">
+        <select id="actor" v-model="actorEmail">
           <option v-for="a in schema.admins" :key="a.email" :value="a.email">
             {{ a.email }}
           </option>

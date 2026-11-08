@@ -102,38 +102,7 @@ return `404`. Confirm no rows were created: the West certificate count is
 unchanged (one) and no `issue` audit events exist for East (visible in the
 detail audit trail / database).
 
-### A2 — Retry safety (idempotent bulk issue, sequential)
-
-```bash
-# Run the same operation twice with the SAME idempotency key:
-curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
-  -H "Content-Type: application/json" -d '{"courseId":1}' \
-  "http://localhost:3000/api/certs/bulk"
-curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
-  -H "Content-Type: application/json" -d '{"courseId":1}' \
-  "http://localhost:3000/api/certs/bulk"
-```
-
-Expected: the first call issues certificates; the **second returns the same
-result** (the stored outcome) and creates nothing new. Check that East now has
-exactly 3 certificates (1 demo + 2 issued) and each issued certificate has
-exactly one `issue` audit entry. Concurrent replay (multiple parallel requests
-with the same key) is covered by `npm run verify`; behavior is identical — one
-logical operation, all callers receive the same outcome.
-
-### A3 — Idempotency key misuse
-
-```bash
-# Reuse the key from A2 (or any used key) with a DIFFERENT course:
-curl -s -i -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
-  -H "Content-Type: application/json" -d '{"courseId":2}' \
-  "http://localhost:3000/api/certs/bulk"
-```
-
-Expected: `409` with a "different request payload" error. The first operation's
-result is untouched (no certificates or audit events for course 2 are created).
-
-### A4 — Per-learner outcomes
+### A4 — Per-learner outcomes (run FIRST on a fresh dataset)
 
 ```bash
 curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
@@ -143,7 +112,40 @@ curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
 
 Expected outcomes (`outcomes[]`): Riley Stone and Casey Wren `issued`,
 Alex Lee `skipped / already_certified`, Jordan Blake `skipped / not_completed`.
-Run it a second time — every learner is now `skipped`.
+East now has exactly **3** certificates (1 demo + 2 issued), each issued
+certificate with exactly one `issue` audit event. (Run A4 before A2: once the
+two eligible learners hold certificates, later course-1 bulk issues have nothing
+left to issue.)
+
+### A2 — Retry safety (idempotent bulk issue)
+
+```bash
+# Replay the same operation from A4 with the SAME idempotency key, twice:
+curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
+  -H "Content-Type: application/json" -d '{"courseId":1}' \
+  "http://localhost:3000/api/certs/bulk"
+curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
+  -H "Content-Type: application/json" -d '{"courseId":1}' \
+  "http://localhost:3000/api/certs/bulk"
+```
+
+Expected: both calls return the **identical stored outcome** (the A4 result:
+issued 2, skipped 2) — no new certificates or audit events are created, and the
+East total stays **3**. Each call is one logical operation; callers receive the
+same result. Concurrent replay (multiple parallel requests with the same key) is
+covered by `npm run verify`; behavior is identical.
+
+### A3 — Idempotency key misuse
+
+```bash
+# Reuse the used key from A4 with a DIFFERENT course:
+curl -s -i -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
+  -H "Content-Type: application/json" -d '{"courseId":2}' \
+  "http://localhost:3000/api/certs/bulk"
+```
+
+Expected: `409` with a "different request payload" error. The first operation's
+result is untouched (no certificates or audit events for course 2 are created).
 
 ### A5 — DST and tenant-local dates
 

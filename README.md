@@ -262,8 +262,32 @@ DESIGN.md          design rationale
   `DESIGN.md` for the design decisions. Section 6 was completed without AI
   (`written-answers.md` is candidate-authored).
 
-### Completeness declaration (tool)
+### Completeness declaration
 
-| Tool | Evidence | Export limitation |
-|---|---|---|
-| opencode (CLI, this agent) | `ai/sessions/*.json` via `opencode export` | Native JSON export available; no limitation. Inline autocomplete (if any) is intentionally not used/disclosed here; command transcripts are inside the session exports. |
+1. **AI tools used.** One tool: **opencode** (CLI agent, v1.18.3/1.19.5), model
+   `deepseek-ai/DeepSeek-V4-Flash` (provider `siliconflow`). No other AI tool
+   (Claude app, ChatGPT, Copilot, Cursor, …) was used at any point. Git/GitHub
+   were used for commits; all git commands were issued by the agent and are
+   recorded in the session export.
+2. **Evidence files.**
+   - `ai/sessions/ses_e45378c5bfferVVEWBKnPnKFq2.json` — the **single** session
+     covering the whole engagement (planning through documentation and
+     re-verification). It is opencode's native JSON export and contains, in
+     order: user prompts, full assistant responses, tool calls (bash commands,
+     file reads/writes/edits), errors, timestamps, and model identifiers.
+   - `ai/session-index.csv` — one row per session.
+   - `ai/decision-log.md` — five+ traced decisions across this session, each
+     linked to verification evidence and commit(s).
+3. **Tool action evidence.** Agent commands and file edits are **inside** the
+   native session export (opencode records every tool call), so no separate
+   activity log is required. The exported transcript is the chronological record.
+4. **Export limitation.** None — native JSON export is complete. Everything in
+   this session (including rejected suggestions, unsuccessful runs, live
+   verification probes, and browser-based UI checks) is present in the export.
+5. **Inline autocomplete.** None was used; nothing to disclose or omit.
+6. **Section 6 (written answers).** Completed by the candidate alone, without AI
+   assistance (`written-answers.md` — see its header note).
+7. **Credentials / private data.** None present, so no redaction was needed
+   (narrow `[REDACTED: reason]` replacements were not required). Dependency
+   caches (`node_modules/`) and build output (`dist/`, `server/data.db`) are not
+   AI interaction evidence and are git-ignored.

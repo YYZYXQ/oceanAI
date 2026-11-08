@@ -7,7 +7,7 @@ import { setup } from './setup.js';
 // touching the quick-start demo dataset. Also creates matching learners and
 // completed enrollments so the rows are joined cleanly in list/export.
 export function seedBulk(dbPath, { tenant = 'east', count = 100000 } = {}) {
-  const db = openDb(dbPath);
+  const db = openDb(dbPath ?? undefined);
   const { seeded } = setup(db);
   if (seeded) console.log('(demo data seeded first)');
 

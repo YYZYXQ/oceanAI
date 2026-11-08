@@ -169,7 +169,8 @@ export function buildRouter(db) {
     const audits = db
       .prepare(`SELECT action, actor, at_utc, reason FROM audit_events WHERE cert_id = ? AND tenant_id = ? ORDER BY id`)
       .all(id, req.actor.tenant_id);
-    res.json({ ...row, localDateTime: `${local.date} ${local.time}`, audits });
+    const { issued_at_utc, ...rest } = row;
+    res.json({ ...rest, localDateTime: `${local.date} ${local.time}`, audits });
   });
 
   // ---- Bulk issue (idempotent) -------------------------------------------------

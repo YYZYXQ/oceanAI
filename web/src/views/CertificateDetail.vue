@@ -59,8 +59,7 @@ async function doRevoke() {
         <dt>Serial number</dt><dd>{{ cert.serial }}</dd>
         <dt>Course</dt><dd>{{ cert.course_title }}</dd>
         <dt>Learner</dt><dd>{{ cert.learner_name }}</dd>
-        <dt>Issue date (UTC)</dt><dd>{{ new Date(cert.issued_at_utc).toISOString() }}</dd>
-        <dt>Issue date (tenant-local)</dt><dd>{{ cert.localDateTime }}</dd>
+        <dt>Issue date</dt><dd>{{ cert.localDateTime }}</dd>
         <dt>Status</dt><dd><span class="status-tag" :class="`status-${cert.status}`">{{ cert.status }}</span></dd>
         <template v-if="cert.status === 'revoked'">
           <dt>Revoked at</dt><dd>{{ new Date(cert.revoked_at_utc).toISOString() }}</dd>

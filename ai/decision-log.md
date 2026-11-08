@@ -11,7 +11,7 @@ commit(s). All decisions in this build were made during session
 - Acceptance results: `npm run verify` -> "38 passed, 0 failed"
   (A1-A7; recorded in the session transcript near the end)
 
-## D1 â€” Accepted AI suggestion: better-sqlite3 + precomputed tenant-local date
+## D1 â€?Accepted AI suggestion: better-sqlite3 + precomputed tenant-local date
 
 - **Decision:** Use better-sqlite3 (synchronous) in WAL mode, and store a
   precomputed `certificates.local_date` (`YYYY-MM-DD` in the tenant's IANA
@@ -25,7 +25,7 @@ commit(s). All decisions in this build were made during session
   and A6 list-sorted checks pass on `npm run verify`.
 - **Commits:** (final build commit)
 
-## D2 â€” Rejected/corrected AI output: unaliased column references in ORDER BY
+## D2 â€?Rejected/corrected AI output: unaliased column references in ORDER BY
 
 - **Suggestion produced:** `ORDER BY certificates.local_date` while the FROM
   clause aliases the table (`FROM certificates c`). SQLite rejects the original
@@ -37,7 +37,7 @@ commit(s). All decisions in this build were made during session
   check passes.
 - **Commits:** (final build commit)
 
-## D3 â€” Correction found by verification: route ordering /certs/export vs /certs/:id
+## D3 â€?Correction found by verification: route ordering /certs/export vs /certs/:id
 
 - **Bug:** `GET /certs/export` was declared after `GET /certs/:id`, so Express
   matched `export` as `:id` and returned 404 (export silently produced
@@ -47,7 +47,7 @@ commit(s). All decisions in this build were made during session
 - **Verification:** `npm run verify` A6 now exports the exact matching rows and
   repeated exports are byte-identical.
 
-## D4 â€” Scope/design tradeoff: dedicated readonly connection for CSV export
+## D4 â€?Scope/design tradeoff: dedicated readonly connection for CSV export
 
 - **Tradeoff:** A single better-sqlite3 connection cannot run a second statement
   while a cursor is iterating. Rather than buffering 100k+ rows in memory, the
@@ -59,7 +59,7 @@ commit(s). All decisions in this build were made during session
 - **Verification:** A6 "list request succeeds while export is running" passes and
   export of 100k rows completes in ~0.1s.
 
-## D5 â€” Normalization correction: serial prefix casing
+## D5 â€?Normalization correction: serial prefix casing
 
 - **Suggestion produced:** seeded demo serials `EAST-...`/`WEST-...` but runtime
   bulk-issue serials derived from the lowercase DB slugs (`east-...`).

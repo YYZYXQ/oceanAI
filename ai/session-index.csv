@@ -1,2 +1,2 @@
 session_id,tool,model,started_at,ended_at,export_file,purpose,related_commits
-ses_e45378c5bfferVVEWBKnPnKFq2,opencode,deepseek-ai/DeepSeek-V4-Flash,2026-11-08T10:51:01Z,2026-11-08T11:27:36Z,ai/sessions/ses_e45378c5bfferVVEWBKnPnKFq2.json,init repo, read briefing, design, backend, frontend, acceptance verify,TBD
+ses_e45378c5bfferVVEWBKnPnKFq2,opencode,deepseek-ai/DeepSeek-V4-Flash,2026-11-08T10:51:01Z,2026-11-08T11:27:36Z,ai/sessions/ses_e45378c5bfferVVEWBKnPnKFq2.json,read briefing,link/init repo,build backend+frontend+scripts,verify A1-A7,documentation,3fce0f4,71d6b3a

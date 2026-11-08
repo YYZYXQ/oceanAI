@@ -53,12 +53,13 @@ function openDetail(id) {
       </div>
     </header>
 
-    <main :key="actorEmail">
+    <main v-if="actorEmail" :key="actorEmail">
       <template v-if="view.name === 'detail'">
         <button class="back" @click="view = { name: 'list' }">← Certificates</button>
         <CertificateDetail :id="view.id" />
       </template>
       <CertificateList v-else :courses="tenantCourses" @open="openDetail" />
     </main>
+    <p v-else class="state-loading">Loading actor context…</p>
   </div>
 </template>

@@ -61,15 +61,124 @@ acceptance scenario, printing PASS/FAIL:
 
 ## Reproducing A1–A7 manually
 
-| Scenario | How to reproduce |
-|---|---|
-| A1 | As `bob@west.test`, call `GET /api/certs/1`, `POST /api/certs/bulk` with an East `courseId`. Both return 404; no certificates or audit rows are created. The list only ever shows West rows. |
-| A2 | As Alice, `POST /api/certs/bulk` with the same `Idempotency-Key` twice (serial or concurrent). The second returns the first operation's outcome; no extra certificates or audit events. |
-| A3 | Reuse a used `Idempotency-Key` with a different `courseId`. Returns `409` and preserves the first result. |
-| A4 | Bulk-issue East "Safety 101": Riley Stone and Casey Wren are `issued`, Alex Lee `skipped: already_certified`, Jordan Blake `skipped: not_completed`. |
-| A5 | Open `GET /api/certs/1` as Alice (`2026-01-11 00:30`) and `GET /api/certs/2` as Bob (`2026-01-10 21:30`). List sorting and CSV use `local_date`. |
-| A6 | `npm run seed:100k` (default tenant `east`), then load the UI and export. While exporting, load the certificate list. See the verify script for the exact assertions (timing < 60s, stable order). |
-| A7 | As Alice, revoke `GET /api/certs/1`, then revoke it again. Status flips once; only one `revoke` audit row exists. |
+A quicker alternative to all of this is `npm run verify`, which executes every
+scenario automatically. The steps below reproduce each one by hand against a
+fresh `npm start` dataset (server on `:3000`). To reset the dataset, delete
+`server/data.db` (and its `-shm`/`-wal` files) before running `npm start`.
+Demo IDs (fixed by the idempotent seeder, see `GET /api/schema` and
+`GET /api/certs`):
+
+- courses: `1` East "Safety 101", `2` East "First Aid Refresher", `3` West "Safety 101"
+- certificates: `1` `EAST-2026-000001`, `2` `WEST-2026-000001`
+
+### A1 — Tenant isolation
+
+```bash
+# Bob lists West certificates only (no EAST serials in the response):
+curl -s -H "X-User: bob@west.test" "http://localhost:3000/api/certs?size=100"
+
+# Bob cannot read an East certificate (404, non-revealing):
+curl -s -i -H "X-User: bob@west.test" "http://localhost:3000/api/certs/1"
+
+# Bob tries to bulk-issue to an East course -> 404, and NOTHING is written:
+curl -s -i -X POST -H "X-User: bob@west.test" -H "Idempotency-Key: a1-x" \
+  -H "Content-Type: application/json" \
+  -d '{"courseId":1}' "http://localhost:3000/api/certs/bulk"
+```
+
+Expected: West list contains only `WEST-*` serials; the two cross-tenant calls
+return `404`. Confirm no rows were created: the West certificate count is
+unchanged (one) and no `issue` audit events exist for East (visible in the
+detail audit trail / database).
+
+### A2 — Retry safety (idempotent bulk issue, sequential)
+
+```bash
+# Run the same operation twice with the SAME idempotency key:
+curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
+  -H "Content-Type: application/json" -d '{"courseId":1}' \
+  "http://localhost:3000/api/certs/bulk"
+curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
+  -H "Content-Type: application/json" -d '{"courseId":1}' \
+  "http://localhost:3000/api/certs/bulk"
+```
+
+Expected: the first call issues certificates; the **second returns the same
+result** (the stored outcome) and creates nothing new. Check that East now has
+exactly 3 certificates (1 demo + 2 issued) and each issued certificate has
+exactly one `issue` audit entry. Concurrent replay (multiple parallel requests
+with the same key) is covered by `npm run verify`; behavior is identical — one
+logical operation, all callers receive the same outcome.
+
+### A3 — Idempotency key misuse
+
+```bash
+# Reuse the key from A2 (or any used key) with a DIFFERENT course:
+curl -s -i -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a2-key" \
+  -H "Content-Type: application/json" -d '{"courseId":2}' \
+  "http://localhost:3000/api/certs/bulk"
+```
+
+Expected: `409` with a "different request payload" error. The first operation's
+result is untouched (no certificates or audit events for course 2 are created).
+
+### A4 — Per-learner outcomes
+
+```bash
+curl -s -X POST -H "X-User: alice@east.test" -H "Idempotency-Key: a4-key" \
+  -H "Content-Type: application/json" -d '{"courseId":1}' \
+  "http://localhost:3000/api/certs/bulk"
+```
+
+Expected outcomes (`outcomes[]`): Riley Stone and Casey Wren `issued`,
+Alex Lee `skipped / already_certified`, Jordan Blake `skipped / not_completed`.
+Run it a second time — every learner is now `skipped`.
+
+### A5 — DST and tenant-local dates
+
+```bash
+curl -s -H "X-User: alice@east.test" "http://localhost:3000/api/certs/1"   # EAST-2026-000001
+curl -s -H "X-User: bob@west.test"     "http://localhost:3000/api/certs/2"   # WEST-2026-000001
+```
+
+Both certificates share the UTC timestamp `2026-01-10T13:30:00Z`. Expected:
+East detail shows `localDateTime: "2026-01-11 00:30"` and `local_date:
+"2026-01-11"`; West shows `"2026-01-10 21:30"` / `"2026-01-10"`. The East list
+sorted by `sort=local_date` and the exported CSV use these local calendar dates.
+
+### A6 — Export growth (100,000 East rows)
+
+```bash
+npm run seed:100k                          # adds 100k East certs (demo rows untouched)
+npm start                                  # needed only if the server is not running
+
+# Export twice with a search + sort, and request the certificate LIST during
+# the first export (both below can run in parallel terminals):
+curl -s -H "X-User: alice@east.test" \
+  "http://localhost:3000/api/certs/export?q=000001&sort=local_date&order=asc" -o export1.csv
+curl -s -H "X-User: alice@east.test" \
+  "http://localhost:3000/api/certs/export?q=000001&sort=local_date&order=asc" -o export2.csv
+curl -s -H "X-User: alice@east.test" "http://localhost:3000/api/certs?size=20"   # during export
+```
+
+Expected: each export finishes well under 60 seconds; both CSV files contain
+exactly the matching East rows in the same order (rows with equal
+`issue_date` keep the same relative order); the list request succeeds while an
+export is running. `export2.csv` is byte-identical to `export1.csv`.
+
+### A7 — Revocation audit
+
+```bash
+curl -s -X POST -H "X-User: alice@east.test" -H "Content-Type: application/json" \
+  -d '{"reason":"policy review"}' "http://localhost:3000/api/certs/1/revoke"
+curl -s -X POST -H "X-User: alice@east.test" -H "Content-Type: application/json" \
+  -d '{"reason":"policy review"}' "http://localhost:3000/api/certs/1/revoke"
+```
+
+Expected: the first call flips the status to `revoked` and writes **one**
+`revoke` audit event; the repeat returns `200` with
+`alreadyRevoked: true` and writes nothing. The detail audit trail shows exactly
+one `revoke` entry.
 
 ### 100,000-row generation
 

@@ -1,0 +1,25 @@
+{
+  "name": "oceanai-certificate-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-tenant certificate admin console (technical interview assessment)",
+  "scripts": {
+    "start": "node server/scripts/setup.js && vite build && node server/index.js",
+    "dev": "node server/scripts/setup.js && vite",
+    "build": "vite build",
+    "setup": "node server/scripts/setup.js",
+    "verify": "node server/scripts/verify.js",
+    "seed:100k": "node server/scripts/seed-bulk.js",
+    "test": "npm run verify"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.2.0",
+    "vue": "^3.5.13"
+  }
+}
